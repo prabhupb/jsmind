@@ -38,6 +38,7 @@ export class ViewProvider {
 
         this.container = null;
         this.e_panel = null;
+        this.e_canvas = null;
         this.e_nodes = null;
 
         this.size = { w: 0, h: 0 };
@@ -70,12 +71,16 @@ export class ViewProvider {
         this.graph = init_graph(this, this.opts.engine);
 
         this.e_panel = $.c('div');
+        this.e_canvas = $.c('div'); // New wrapper for zoom transform
         this.e_nodes = $.c('jmnodes');
         this.e_editor = $.c('input');
         this.e_panel.className = 'jsmind-inner jmnode-overflow-' + this.opts.node_overflow;
         this.e_panel.tabIndex = 1;
-        this.e_panel.appendChild(this.graph.element());
-        this.e_panel.appendChild(this.e_nodes);
+        this.e_canvas.className = 'jsmind-canvas';
+        this.e_canvas.style.position = 'relative'; // Contain absolutely positioned children
+        this.e_canvas.appendChild(this.graph.element());
+        this.e_canvas.appendChild(this.e_nodes);
+        this.e_panel.appendChild(this.e_canvas);
 
         this.e_editor.className = 'jsmind-editor';
         this.e_editor.type = 'text';
@@ -165,6 +170,7 @@ export class ViewProvider {
         this.clear_lines();
         this.clear_nodes();
         this.reset_theme();
+        this.reset_zoom();
     }
     reset_theme() {
         var theme_name = this.jm.options.theme;
@@ -173,6 +179,14 @@ export class ViewProvider {
         } else {
             this.e_nodes.className = '';
         }
+    }
+    reset_zoom() {
+        this.zoom_current = 1;
+        this.e_canvas.style.transform = '';
+        this.e_canvas.style.transformOrigin = '';
+        this.e_canvas.style.zoom = '';
+        this.e_canvas.style.width = '';
+        this.e_canvas.style.height = '';
     }
     /** Reset custom styles for all nodes. */
     reset_custom_style() {
@@ -493,9 +507,23 @@ export class ViewProvider {
             ((this.e_panel.scrollTop + zoom_center.y) * zoom) / this.zoom_current - zoom_center.y;
 
         this.zoom_current = zoom;
-        for (var i = 0; i < this.e_panel.children.length; i++) {
-            this.e_panel.children[i].style.zoom = zoom;
+
+        // Check if Safari/WebKit
+        const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent) ||
+                        (/iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream);
+
+        if (isSafari) {
+            // Use transform for Safari to avoid zoom issues
+            this.e_canvas.style.transform = `scale(${zoom})`;
+            this.e_canvas.style.transformOrigin = '0 0';
+            // Adjust canvas dimensions to maintain proper scrolling
+            this.e_canvas.style.width = (this.size.w * zoom) + 'px';
+            this.e_canvas.style.height = (this.size.h * zoom) + 'px';
+        } else {
+            // Use zoom for other browsers
+            this.e_canvas.style.zoom = zoom;
         }
+
         this._show();
         this.e_panel.scrollLeft = panel_scroll_x;
         this.e_panel.scrollTop = panel_scroll_y;

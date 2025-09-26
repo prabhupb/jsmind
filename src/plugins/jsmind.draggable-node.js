@@ -123,7 +123,15 @@ export class DraggableNode {
     /** Create canvas for drawing drag lines. */
     create_canvas() {
         var c = $.c('canvas');
-        this.jm.view.e_panel.appendChild(c);
+        // Set canvas positioning for proper overlay
+        c.style.position = 'absolute';
+        c.style.left = '0';
+        c.style.top = '0';
+        c.style.pointerEvents = 'none'; // Allow clicks to pass through
+        c.style.zIndex = '2'; // Above nodes but below shadow
+        // Append to the zoom wrapper (e_canvas) instead of e_panel for proper zoom support
+        var container = this.jm.view.e_canvas || this.jm.view.e_panel;
+        container.appendChild(c);
         var ctx = c.getContext('2d');
         this.e_canvas = c;
         this.canvas_ctx = ctx;
