@@ -508,12 +508,19 @@ export class ViewProvider {
 
         this.zoom_current = zoom;
 
-        // Check if Safari/WebKit
-        const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent) ||
-                        (/iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream);
+        // Check if Safari/WebKit or iOS WebView
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+                     (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+        const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+        const isWebView =
+            (isIOS && !navigator.userAgent.match(/Safari/)) ||
+            (window.webkit && window.webkit.messageHandlers) ||
+            !window.navigator.standalone ||
+            (navigator.userAgent.match(/wv|WebView/i));
+        const needsTransform = isIOS || isSafari || isWebView;
 
-        if (isSafari) {
-            // Use transform for Safari to avoid zoom issues
+        if (needsTransform) {
+            // Use transform for Safari/WebKit/WebView to avoid zoom issues
             this.e_canvas.style.transform = `scale(${zoom})`;
             this.e_canvas.style.transformOrigin = '0 0';
             // Adjust canvas dimensions to maintain proper scrolling
